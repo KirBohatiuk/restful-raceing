@@ -34,11 +34,14 @@ class StudentInfo(Resource):
             new_name = request.get_json()
             session = get_session()
             student = session.query(StudentModel).filter(StudentModel.first_name == first_name).first()
-            student.first_name = new_name["first_name"]
-            student.last_name = new_name["last_name"]
-            session.commit()
+            try:
+                student.first_name = new_name["first_name"]
+                student.last_name = new_name["last_name"]
+                session.commit()
+            except:
+                abort(404)
             return student.first_name
-        return "Invalid data"
+        return abort(404)
 
     def delete(self):
         if request.args.get("first_name") and request.args.get("last_name"):
@@ -49,7 +52,7 @@ class StudentInfo(Resource):
             session.delete(student)
             session.commit()
             return student.first_name
-        return "Invalid data"
+        return abort(404)
 
 
 class CourseInfo(Resource):
@@ -58,17 +61,19 @@ class CourseInfo(Resource):
             course_name = request.args.get("course_name")
             session = get_session()
             courses = session.query(CourseModel).filter(CourseModel.course_name == course_name).all()
-            students_dict = my_utils.courses_dict(courses, course_name)
-            if students_dict == {}:
+            courses_dict = my_utils.courses_dict(courses, course_name)
+            if courses_dict == {}:
                 abort(404)
-            return students_dict
-        return "Invalid data"
+            return courses_dict
+        return abort(404)
 
     def post(self):
         course_info = request.get_json()
-        course_name = course_info["course_name"]
-        course_description = course_info["course_description"]
-        print(course_name)
+        try:
+            course_name = course_info["course_name"]
+            course_description = course_info["course_description"]
+        except:
+            abort(404)
         session = get_session()
         course = create_course(course_name=course_name, course_description=course_description, session=session)
         return course.course_name
@@ -79,11 +84,14 @@ class CourseInfo(Resource):
             new_course_info = request.get_json()
             session = get_session()
             courses = session.query(CourseModel).filter(CourseModel.course_name == course_name).first()
-            courses.course_name = new_course_info["new_course_name"]
-            courses.course_description = new_course_info["new_course_description"]
+            try:
+                courses.course_name = new_course_info["new_course_name"]
+                courses.course_description = new_course_info["new_course_description"]
+            except:
+                abort(404)
             session.commit()
             return courses.course_name
-        return "Invalid data"
+        return abort(404)
 
     def delete(self):
         if request.args.get("course_name"):
@@ -93,17 +101,19 @@ class CourseInfo(Resource):
             session.delete(course)
             session.commit()
             return course.course_name
-        return "Invalid data"
+        return abort(404)
 
 
 class StudentCourseMod(Resource):
     def post(self):
         course_info = request.get_json()
         user_info = request.get_json()
-        first_name = user_info["first_name"]
-        last_name = user_info["last_name"]
-        course_name = course_info["course_name"]
-        print(first_name, last_name, course_name)
+        try:
+            first_name = user_info["first_name"]
+            last_name = user_info["last_name"]
+            course_name = course_info["course_name"]
+        except:
+            abort(404)
         session = get_session()
         student = session.query(StudentModel).filter(
             StudentModel.first_name == first_name,
@@ -112,4 +122,21 @@ class StudentCourseMod(Resource):
         course = session.query(CourseModel).filter(CourseModel.course_name == course_name).first()
         student.courses_id.append(course)
         session.commit()
-        return "hi"
+        return 1
+
+
+    def delete(self):
+        if request.args.get("first_name") and request.args.get("last_name") and request.args.get("course_name"):
+            first_name = request.args.get("first_name")
+            last_name = request.args.get("last_name")
+            course_name = request.args.get("course_name")
+            session = get_session()
+            student = session.query(StudentModel).filter(
+                StudentModel.first_name == first_name,
+                StudentModel.last_name == last_name
+            ).first()
+            course = session.query(CourseModel).filter(CourseModel.course_name == course_name).first()
+            student.courses_id.remove(course)
+            session.commit()
+        else:
+            return abort(404)
