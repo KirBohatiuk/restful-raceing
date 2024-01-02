@@ -8,5 +8,6 @@ def create_app():
     api = Api(app)
     db.create_tables()
     api.add_resource(view.StudentInfo, "/api/v1/student info/")
-
+    api.add_resource(view.CourseInfo, "/api/v1/course info/")
+    api.add_resource(view.StudentCourseMod, "/api/v1/groups modification/")
     return app
