@@ -1,25 +1,26 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Table, create_engine
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-
+from tenacity import retry, stop_after_delay, stop_after_attempt, wait_fixed
+from flask import abort
 
 Base = declarative_base()
 
 
 association_table = Table(
      "association_table", Base.metadata,
-     Column("student_id", Integer, ForeignKey("student.student_id"), primary_key=True),
-     Column("course_id", Integer, ForeignKey("course.course_id"), primary_key=True)
+     Column("student_id", Integer, ForeignKey("student.id"), primary_key=True),
+     Column("course_id", Integer, ForeignKey("course.id"), primary_key=True)
 )
 
 
 class StudentModel(Base):
     __tablename__ = "student"
 
-    student_id = Column("student_id", Integer, autoincrement=True, primary_key=True)
+    id = Column("id", Integer, autoincrement=True, primary_key=True)
     first_name = Column("first_name", String)
     last_name = Column("last_name", String)
-    courses_id = relationship("CourseModel", secondary=association_table, back_populates="course_users")
+    courses_id = relationship("CourseModel", secondary=association_table, back_populates="course_users_id")
 
     def __repr__(self):
         return f"{self.first_name} {self.last_name}"
@@ -28,13 +29,13 @@ class StudentModel(Base):
 class CourseModel(Base):
     __tablename__ = "course"
 
-    course_id = Column("course_id", Integer, autoincrement=True, primary_key=True)
-    course_name = Column("course_name", String)
-    course_description = Column("course_description", String)
-    course_users = relationship("StudentModel", secondary=association_table, back_populates="courses_id")
+    id = Column("id", Integer, autoincrement=True, primary_key=True)
+    name = Column("name", String)
+    description = Column("description", String)
+    course_users_id = relationship("StudentModel", secondary=association_table, back_populates="courses_id")
 
     def __repr__(self):
-        return f"{self.course_name} - {self.course_user}"
+        return f"{self.course_name} - {self.course_users_id}"
 
 
 def get_engine():
@@ -52,6 +53,7 @@ def create_tables():
     Base.metadata.create_all(bind=engine, checkfirst=True)
 
 
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
 def create_student(session, first_name, last_name):
     student = StudentModel(first_name=first_name, last_name=last_name)
     session.add(student)
@@ -59,17 +61,80 @@ def create_student(session, first_name, last_name):
     return student
 
 
-def create_course(session, course_name, course_description):
-    course = CourseModel(course_name=course_name, course_description=course_description)
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def get_student(first_name, last_name, session):
+    student = session.query(StudentModel).filter(
+        StudentModel.first_name == first_name, StudentModel.last_name == last_name
+    ).first()
+    if not student:
+        return abort(404)
+    return student
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def get_course(course_name, session):
+    course = session.query(CourseModel).filter(CourseModel.name == course_name).first()
+    if course == {}:
+        return abort(404)
+    return course
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def change_student_info(new_name, student, session):
+    try:
+        student.first_name = new_name["first_name"]
+        student.last_name = new_name["last_name"]
+        session.commit()
+    except:
+        return abort(404)
+    return student
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def create_course(session, name, description):
+    course = CourseModel(name=name, description=description)
     session.add(course)
     session.commit()
     return course
 
 
-def add_student_to_course(session, student, curse):
-    student.courses_id.append(curse)
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def change_course_info(course_info, course, session):
+    try:
+        course.name = course_info["course_name"]
+        course.description = course_info["course_description"]
+        session.commit()
+    except:
+        return abort(404)
+    return course
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def add_student_to_course(session, student, course):
+    student.courses_id.append(course)
     session.commit()
     return student
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def remove_student_from_course(session, student, course):
+    student.courses_id.remove(course)
+    session.commit()
+    return student
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def remove_student(session, student):
+    session.delete(student)
+    session.commit()
+    return student
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def remove_course(session, course):
+    session.delete(course)
+    session.commit()
+    return course
 
 
 engine = get_engine()
