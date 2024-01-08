@@ -72,11 +72,27 @@ def get_student(first_name, last_name, session):
 
 
 @retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def get_all_students(first_name, last_name, session):
+    students = session.query(StudentModel).all()
+    if not students:
+        return abort(404)
+    return students
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
 def get_course(course_name, session):
     course = session.query(CourseModel).filter(CourseModel.name == course_name).first()
     if course == {}:
         return abort(404)
     return course
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def get_all_courses(session):
+    courses = session.query(CourseModel).all()
+    if courses == {}:
+        return abort(404)
+    return courses
 
 
 @retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
@@ -128,6 +144,15 @@ def remove_student(session, student):
     session.delete(student)
     session.commit()
     return student
+
+
+@retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
+def get_student_by_id(student_id, session):
+    student = session.query(StudentModel).filter(StudentModel.id == student_id).first()
+    if not student:
+        return abort(404)
+    return student
+
 
 
 @retry(stop=(stop_after_delay(10) | stop_after_attempt(3)), wait=wait_fixed(2))
