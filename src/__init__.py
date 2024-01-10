@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_restful import Api
 from . import view, db, my_utils
+from dotenv import dotenv_values
 
 
 def create_app():
@@ -13,4 +14,6 @@ def create_app():
     api.add_resource(view.AllStudentsInCourse, "/api/v1/course-students-interactions/")
     api.add_resource(view.CourseWithSomeStudents, "/api/v1/courses-with-sertain-students/")
     app.register_blueprint(view.bp)
+    user_credential_from_envfile = dotenv_values(".env")
+    print(user_credential_from_envfile)
     return app
