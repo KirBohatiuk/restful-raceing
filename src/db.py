@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from tenacity import retry, stop_after_delay, stop_after_attempt, wait_fixed
 from flask import abort
+from .my_utils import get_engine_info
 
 Base = declarative_base()
 
@@ -39,7 +40,8 @@ class CourseModel(Base):
 
 
 def get_engine():
-    engine = create_engine("postgresql://postgres:vq34v2gx@localhost:5432/postgres", echo=False)
+    db, user, password, host, port, db_name = get_engine_info()
+    engine = create_engine(f"{db}://{user}:{password}@{host}:{port}/{db_name}", echo=False)
     return engine
 
 
