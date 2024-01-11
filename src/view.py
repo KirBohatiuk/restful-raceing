@@ -164,17 +164,15 @@ bp = Blueprint("send", __name__, url_prefix="/send")
 def send_student_to_api():
     first_name = input("User`s first name: ")
     last_name = input("User`s last name: ")
-    url = "http://127.0.0.1:5000/api/v1/student-info/"
-    data = {"first_name": first_name, "last_name": last_name}
-    r = requests.post(url=url, json=data)
-    return data
+    session = get_session()
+    student = create_student(first_name=first_name, last_name=last_name, session=session)
+    return student.first_name
 
 
 @bp.route("/course/")
 def send_course_to_api():
     course_name = input("course`s course name: ")
     course_description = input("course`s description: ")
-    url = "http://127.0.0.1:5000/api/v1/course-info/"
-    data = {"course_name": course_name, "course_description": course_description}
-    r = requests.post(url=url, json=data)
-    return data
+    session = get_session()
+    course = create_course(name=course_name, description=course_description, session=session)
+    return course.name
